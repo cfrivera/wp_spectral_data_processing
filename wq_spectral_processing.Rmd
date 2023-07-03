@@ -1,0 +1,219 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+Change working directory and path in the files object
+```{r}
+library("tidyverse")
+library("readr")
+
+# setwd("/Users/charles/Desktop/wp_asd/SHET3p_05/ascii_files/")
+setwd("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/fall_2021/")
+files <- list.files("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/fall_2021/")
+```
+
+Functions to read in csv files from directory
+
+```{r}
+read_csv_folder <- function(folder_path) {
+  file_list <- list.files(folder_path, pattern = ".csv", full.names = TRUE)
+  data_list <- lapply(file_list, read_csv)
+  
+  #todo, make the code below to work:
+  # data_list <- lapply(file_list, read_csv(file_list, show_col_types = FALSE))
+  return(data_list)
+}
+```
+
+Function to change data frame into a more useable format 
+
+```{r}
+transform <- function(folder_path, ascii_num){
+
+  # Read in data
+    spec <- read_csv_folder(folder_path)
+    
+  # Turn data horizontally, and join it by wavelength
+    spec <- spec[1:{ascii_num}] %>%
+      reduce(inner_join, by = "Wavelength")
+    
+    spec <- as.data.frame(t(spec))
+    
+    x <- spec[1,]
+    colnames(spec) <- x
+    spec <- spec[-1,]
+    spec$label <- row.names(spec)
+    
+    spec <- spec %>% 
+      select(label, everything())
+    
+    spec$rep <- sub(".*_", "", spec$label)
+    spec$sample_id <- sub("_.*", "", spec$label)
+    spec <- spec %>% 
+      select(sample_id, everything())
+    spec <- spec %>% 
+      select(rep, everything())
+
+    return(spec)
+}
+
+```
+
+
+For loop to iterate through all of the files // change range to length of files (i.e however many folders there are)
+```{r}
+
+# MAKE SURE TO CHANGE WORKING DIRECTORY/PATH
+
+setwd("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/")
+files <- list.files("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/")
+
+fileLength <- length(files)
+fileLength
+
+output_df <- NULL
+
+# change 3 to {fileLength}
+for (i in 1:{fileLength}) {
+  folder_path <- paste0(getwd(), "/", files[i], "/ascii_files")
+  ascii_num <- length(list.files(folder_path))
+  
+  working = print(paste0("working on: ", i))
+  
+  x <- transform(folder_path, ascii_num)
+  
+  # Concatenate each csv file to one main file
+  output_df <- rbind(output_df, x)
+  
+}
+
+cat("\014")  
+output_df
+
+
+```
+
+
+Export data into csv
+```{r}
+output_dir = "/Users/charles/Desktop/wp_asd"
+write.csv(output_df, file = file.path(output_dir, "wp_summer_2021.csv"), row.names = TRUE)
+
+```
+
+
+
+Create a function that will make the data frame compatible with ggplot (make data set vertical)
+```{r}
+
+vertSpec <- NULL
+
+verticalTransform <- function(folder_path, ascii_num){
+
+  # Read in data
+    vertSpec <- read_csv_folder(folder_path)
+    
+  # Turn data vertically, and join it by wavelength
+    vertSpec <- vertSpec[1:{ascii_num}] %>%
+      reduce(inner_join, by = "Wavelength")
+    
+    # spec <- as.data.frame(t(spec))
+
+    #Return
+    return(vertSpec)
+}
+
+```
+
+
+For loop to iterate through all of the files
+
+```{r}
+
+# MAKE SURE TO CHANGE WORKING DIRECTORY/PATH
+
+setwd("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/")
+files <- list.files("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/")
+
+fileLength <- length(files)
+fileLength
+
+# Create an empty data frame to store the concatenated data
+main_df <- data.frame(Wavelength = numeric(0))
+
+# Change for loop range to the number of folders there are
+for (i in 1:{fileLength}) {
+  
+  #change directory to the one you want to process
+  
+# MAKE SURE TO CHANGE WORKING DIRECTORY/PATH
+  folder_path <- paste0("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/", files[i], "/ascii_files")
+  ascii_num <- length(list.files(folder_path))
+
+  specPlot <- verticalTransform(folder_path, ascii_num)
+  
+  # Add the sample columns to the main data frame
+  main_df <- merge(main_df, specPlot, by = "Wavelength", all = TRUE)
+  
+  working = print(paste0("working on: ", i))
+  
+}
+
+main_df
+
+```
+Exclude blanks from data (columns that contain "WR" sub-string)
+
+```{r}
+
+# Function to exclude columns with a given substring
+exclude_blanks <- function(df, substring) {
+  df[, !grepl(substring, colnames(df))]
+}
+
+# Example usage: exclude columns with "XYZ" in the name
+filtered_data <- exclude_blanks(main_df, "WR")
+
+filtered_data
+
+```
+
+
+For loop to plot in ggplot
+
+```{r}
+library("ggplot2")
+
+for (i in 2:ncol(filtered_data)) {
+  # Extract the column name
+  column_name <- colnames(filtered_data)[i]
+  
+  # Create a line plot using ggplot
+  p <- ggplot(filtered_data, aes(Wavelength, filtered_data[[i]])) +
+    geom_line() +
+    labs(x = "Wavelength", y = "Reflectance %") +
+    ggtitle(column_name) +
+    theme_minimal()
+  
+  working = print(paste0("working on: ", i))
+  
+  
+  print(p)
+  
+}
+
+
+```
+
+
+```{r}
+install.packages("hsdar")
+library("hsdar")
+```
+
+
+
+
+
