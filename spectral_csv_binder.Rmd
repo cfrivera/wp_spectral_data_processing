@@ -1,0 +1,105 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+
+library(tidyverse)
+library("readr")
+```
+
+Functions that read the csv file and concatonate it into a data frame
+```{r}
+library(dplyr)
+
+setwd("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021")
+files <- list.files("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/")
+
+  ## reading in csv files
+read_csv_folder <- function(folder_path) {
+    file_list <- list.files(folder_path, pattern = ".csv", full.names = TRUE)
+    data_list <- lapply(file_list, read_csv)
+    return(data_list)
+  }
+
+transform <- function(folderPath) {
+  
+  spec <- read_csv_folder(folderPath)
+  
+  ## formatting
+  spec <- spec[1:length(list.files((folder_path)))] %>% #<-- the spec param must be the amount of csv files in the ascii_files folder
+    reduce(inner_join, by = "Wavelength")
+  spec <- as.data.frame(t(spec))
+  
+  x <- spec[1, ]
+  colnames(spec) <- x
+  spec <- spec[-1, ]
+  spec$label <- row.names(spec)
+  
+  return(spec)
+}
+
+```
+
+Function call
+```{r}
+output_df <- data.frame()  # Create an empty data frame
+
+for (i in 1:length(files)) {
+  folder_path <- paste0("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/summer_2021/", files[i], "/ascii_files")
+  print(folder_path)
+  x <- transform(folder_path)
+  working <- print(folder_path)
+  output_df <- bind_rows(output_df, x)
+
+}
+
+output_df
+
+```
+
+
+```{r}
+# jump corrected from 0.1 to 0.15
+output_path = "/Users/charles/Desktop/wp_asd_spectra/wp_summer_2021/"
+write.csv(output_df, file = file.path(output_path, "wp_summer_jump_correct.csv"), row.names = TRUE)
+```
+
+
+
+
+
+
+
+
+```{r}
+plotSpectra <- function(data) {
+  wavelength <- data[[1]]
+  sample <- data[, -1]
+  
+  for (i in 1:length(sample)) {
+    current_dependent <- sample[[i]]
+    
+    plot_title <- paste(names(sample)[i])
+    plot(x = wavelength, y = current_dependent, 
+         main = plot_title, xlab = "Wavelength (nm)", ylab = "Reflectance %", type = "l")
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
