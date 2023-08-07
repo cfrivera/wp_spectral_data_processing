@@ -1,0 +1,124 @@
+---
+title: "wp_spectral_plots_all"
+author: "Charles Rivera"
+date: "8/7/23"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+
+Function to plot all csv /// start here
+
+```{r}
+spectral_data = read.csv('/Users/charles/Desktop/wp_asd_spectra/wp_fall_2021/wp_fall.csv', sep=',', row.names=1)
+
+# Get rid of the 'x' in front of wavelengths
+
+updatedColumns <- colnames(spectral_data)
+for (i in seq_along(updatedColumns)) {
+  updatedColumns[i] <- substring(updatedColumns[i], 2)
+}
+colnames(spectral_data) <- updatedColumns
+
+#spectral_data <- spectral_data[, -which(names(spectral_data) == "label")]
+
+spectral_data
+```
+
+
+Remove White references
+
+```{r}
+
+# Specified string to exclude
+specifiedString <- "WR"
+
+# Get the row indices that match the specified string
+matchingRows <- grep(specifiedString, rownames(spectral_data))
+
+# Exclude the matching rows
+newData <- spectral_data[-matchingRows, ]
+
+# Output the new data frame
+spectral_data <- newData
+spectral_data
+```
+
+Plot spectra onto one pdf
+FUNCITON save_plots_per_page : Plot spectra and save to pdf 
+
+```{r}
+# Load the necessary libraries for plotting (ggplot2 and gridExtra)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+
+# Custom function to save multiple plots per page // define how many plots you want per page with ncol and nrow
+save_plots_per_page <- function(plots_list, ncol = NULL, nrow = NULL, output_path) {
+  num_plots <- length(plots_list)
+  num_pages <- ceiling(num_plots / (ncol * nrow))
+  
+  # Create a PDF device
+  pdf(file.path(output_path))
+  
+  # Loop through pages and save plots
+  for (page_num in seq_len(num_pages)) {
+    start_plot <- (page_num - 1) * (ncol * nrow) + 1
+    end_plot <- min(start_plot + ncol * nrow - 1, num_plots)
+    
+    # Get plots for the current page
+    current_plots <- plots_list[start_plot:end_plot]
+    
+    # Arrange the plots in a grid
+    arranged_plots <- do.call(grid.arrange, c(current_plots, ncol = ncol))
+    
+    # Save the grid of plots to the PDF
+    print(arranged_plots)
+  }
+  
+  # Close the PDF device
+  dev.off()
+}
+```
+
+for loop to iterate through rows calling function above
+```{r}
+# Create an empty list to store plots
+plots_list <- list()
+
+# For loop to iterate through each sample and plot the wavelengths
+for (i in seq_len(nrow(spectral_data))) {
+  # Extract wavelengths for the current sample
+  wavelengths <- spectral_data[i, ]
+  
+  # Create a data frame for plotting
+  plot_data <- data.frame(
+    Wavelength = as.numeric(colnames(spectral_data)),
+    Reflectance = as.numeric(wavelengths) # Updated column name to Reflectance
+  )
+  
+  # Get the row index as the title
+  sample_name <- rownames(spectral_data)[i]
+  
+  # Create the plot (using geom_line() for line plot)
+  p <- ggplot(plot_data, aes(x = Wavelength, y = Reflectance)) + # Updated y = Reflectance
+    geom_line(color = "black") +  # Use geom_line() for line plot
+    labs(title = paste(i, ": ", sample_name),
+         y = "Reflectance %")
+  
+  # Add the plot to the list
+  plots_list[[i]] <- p
+}
+
+# Specify the path where the PDF file will be saved
+output_path <- "/Users/charles/Desktop/wp_asd_spectra/wp_fall_2021/wp_fall_spectra_plots_WR_removed.pdf"
+
+# Save multiple plots per page in the PDF (6 plots per page)
+save_plots_per_page(plots_list, ncol = 2, nrow = 4, output_path)
+
+```
+

@@ -1,0 +1,78 @@
+---
+title: "spectral_csv_binder"
+author: "Charles Rivera and Erin Hestir"
+date: "8/7/23"
+output: html_notebook
+---
+
+This code accesses the csv files in the ASCII folders and concatenates them into one big csv file
+
+
+Load dependencies
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+Functions that read the csv file and concatenate it into a data frame
+```{r}
+library(dplyr)
+
+setwd("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/fall_2021/")
+files <- list.files("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/fall_2021/")
+
+  ## reading in csv files
+read_csv_folder <- function(folder_path) {
+    file_list <- list.files(folder_path, pattern = ".csv", full.names = TRUE)
+    data_list <- lapply(file_list, read_csv)
+    return(data_list)
+  }
+
+transform <- function(folderPath) {
+  
+  spec <- read_csv_folder(folderPath)
+  
+  ## formatting
+  spec <- spec[1:length(list.files((folder_path)))] %>% #<-- the spec param must be the amount of csv files in the ascii_files folder
+    reduce(inner_join, by = "Wavelength")
+  spec <- as.data.frame(t(spec))
+  
+  x <- spec[1, ]
+  colnames(spec) <- x
+  spec <- spec[-1, ]
+
+  return(spec)
+}
+
+
+```
+
+Function call
+```{r}
+output_df <- data.frame()  # Create an empty data frame
+
+for (i in 1:length(files)) {
+  
+  progress <- print(paste("Working on", i))
+  
+  folder_path <- paste0("/Users/charles/Library/CloudStorage/Box-Box/EcoenggLudwigia/Data/ASD/corrected_names/fall_2021/", files[i], "/ascii_files")
+  print(folder_path)
+  x <- transform(folder_path)
+  working <- print(folder_path)
+  output_df <- bind_rows(output_df, x)
+
+}
+
+```
+
+
+```{r}
+output_path = "/Users/charles/Desktop/wp_asd_spectra/wp_fall_2021/"
+write.csv(output_df, file = file.path(output_path, "wp_fall_check.csv"), row.names = TRUE)
+```
+
+
+
+
+
+
