@@ -6,7 +6,7 @@
 
 Water primroses are one of the most invasive aquatic plants found throughout the world, and their presence brings about both environmental and economic consequences. To investigate the invasion strategies of this invasive plant, remote sensing plant spectroscopy can be employed.
 
-The purpose of this code is to preprocess the water primrose spectral data collected between the summer of 2021 and spring of 2022 from the Sacramento-San Joaquin Delta, CA. The goal is to format the data in a way that is compatible with various analysis techniques and packages, such as HSDAR.
+The purpose of this code is to preprocess the water primrose spectral data collected between the summer of 2021 and spring of 2022 from the Sacramento-San Joaquin Delta, CA. Here, the I will preform some data transformation and ETL (extract, transform, load) processes to help analyze the data.
 
 # Code
 
